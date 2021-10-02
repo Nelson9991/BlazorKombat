@@ -1,0 +1,269 @@
+﻿@page "/fighterAdd"
+@using System.Text
+@using System.Text.Json
+@inject HttpClient _httpClient
+
+<EditForm Model="@_fighter" class="mb-4"
+          OnValidSubmit="SaveFighterAsync"
+          enctype="multipart/form-data">
+    <RadzenCard>
+        <div class="mb-3">
+            <div class="mb-2">
+                <RadzenLabel Text="Fighter Name"/>
+            </div>
+            <div>
+                <RadzenTextBox @bind-Value="_fighter.Name" class="w-100"/>
+            </div>
+        </div>
+        <div class="mb-3">
+            <div class="mb-2">
+                <RadzenLabel Text="Fighter Sprite"/>
+            </div>
+            <div class="row">
+                <div class="col-md-6 col-12">
+                    <InputFile class="form-control" OnChange="LoadImageAsync"/>
+                </div>
+                <div class="col-md-6 col-12 text-center">
+                    @if (!string.IsNullOrEmpty(_imgUrl))
+                    {
+                        <img src="@_imgUrl" style="width: 355px; height: 355px" class="img-fluid" alt="Fighter Sprite"/>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="mb-3">
+            <div class="mb-2">
+                <RadzenLabel Text="Fighter Bio"/>
+            </div>
+            <div>
+                <RadzenTextArea @bind-Value="_fighter.Bio" class="w-100" MaxLength="500"/>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <h3 class="text-primary">Abilities</h3>
+        </div>
+
+        <div class="mb-3 row">
+            <div class="col-md-6">
+                <div class="mb-2">
+                    <RadzenLabel Text="Ability Name"/>
+                </div>
+                <RadzenTextBox @bind-Value="@_abilityName" class="w-100"/>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-1">
+                    <RadzenLabel Text="Ability Controls"/>
+                </div>
+                <div class="border-bottom pb-1">
+                    <div class="row">
+                        <div class="col-10">
+                            @foreach (var control in _controlHtmlIcons)
+                            {
+                                @((MarkupString)control)
+                                <text>&nbsp;</text>
+                            }
+                        </div>
+                        <div class="col-2 text-end">
+                            <RadzenButton ButtonStyle="@ButtonStyle.Danger" Icon="arrow_back" Click="RemoveControl"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 row my-3 ">
+                <div class="col-md-2">
+                    <RadzenButton Text="Add Ability" ButtonStyle="@ButtonStyle.Secondary" Click="AddAbility"/>
+                </div>
+                <div class="col-md-10">
+                    <div class="row justify-content-end">
+                        <div class="col-md-3">
+                            <table>
+                                <tr>
+                                    <td></td>
+                                    <td>
+                                        <RadzenButton Icon="expand_less" ButtonStyle="@ButtonStyle.Light"
+                                                      Click="@(() => AddSelectedControl("<span class=\"material-icons\">expand_less</span>", "expand_less"))"/>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <RadzenButton Icon="chevron_left" ButtonStyle="@ButtonStyle.Light"
+                                                      Click="@(() => AddSelectedControl("<span class=\"material-icons\">chevron_left</span>", "chevron_left"))"/>
+                                    </td>
+                                    <td></td>
+                                    <td>
+                                        <RadzenButton Icon="chevron_right"
+                                                      ButtonStyle="@ButtonStyle.Light"
+                                                      Click="@(() => AddSelectedControl("<span class=\"material-icons\">chevron_right</span>", "chevron_right"))"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td>
+                                        <RadzenButton Icon="expand_more" ButtonStyle="@ButtonStyle.Light"
+                                                      Click="@(() => AddSelectedControl("<span class=\"material-icons\">expand_more</span>", "expand_more"))"/>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-3">
+                            <table>
+                                <tr>
+                                    <td></td>
+                                    <td>
+                                        <RadzenButton Icon="change_history" ButtonStyle="@ButtonStyle.Light"
+                                                      Click="@(() => AddSelectedControl("<span class=\"material-icons\">change_history</span>", "change_history"))"/>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <RadzenButton Icon="check_box_outline_blank" ButtonStyle="@ButtonStyle.Light"
+                                                      Click="@(() => AddSelectedControl("<span class=\"material-icons\">check_box_outline_blank</span>", "check_box_outline_blank"))"/>
+                                    </td>
+                                    <td></td>
+                                    <td>
+                                        <RadzenButton Icon="radio_button_unchecked" ButtonStyle="@ButtonStyle.Light"
+                                                      Click="@(() => AddSelectedControl("<span class=\"material-icons\">radio_button_unchecked</span>", "radio_button_unchecked"))"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td>
+                                        <RadzenButton Icon="close" ButtonStyle="@ButtonStyle.Light"
+                                                      Click="@(() => AddSelectedControl("<span class=\"material-icons\">close</span>", "close"))"/>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <RadzenDataGrid TItem="Ability" Data="@_abilityList"
+                            AllowFiltering="true" AllowPaging="true"
+                            AllowSorting="true" PageSize="5"
+                            @ref="@_dataGrid" FilterMode="FilterMode.Simple">
+                <Columns>
+                    <RadzenDataGridColumn TItem="Ability" Title="Ability Name" Property="Name"/>
+                    <RadzenDataGridColumn TItem="Ability" Title="Ability Controls" Property="Controls"/>
+                    <RadzenDataGridColumn TItem="Ability" Filterable="false" Sortable="false">
+                        <Template Context="data">
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger"/>
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        </div>
+
+        <div class="row mt-2 mb-3">
+            <div class="col-md-8 col-12 row mx-auto">
+                <div class="col-md-6">
+                    <RadzenButton ButtonType="@ButtonType.Submit" Text="Save"
+                                  Icon="save" class="w-100"/>
+                </div>
+                <div class="col-md-6">
+                    <RadzenButton ButtonType="@ButtonType.Submit" Text="Cancel"
+                                  Icon="cancel" class="w-100"
+                                  ButtonStyle="@ButtonStyle.Danger"/>
+                </div>
+            </div>
+        </div>
+    </RadzenCard>
+</EditForm>
+
+@code {
+    private readonly Fighter _fighter = new();
+    private string? _abilityName;
+    private readonly List<string> _controlHtmlIcons = new();
+    private readonly List<string> _controlIcons = new();
+    private readonly List<Ability> _abilityList = new();
+    private StreamContent? _fileContent;
+    private string _fileName = "";
+    private string _imgUrl = "";
+    private string _imageType = "";
+    private RadzenDataGrid<Ability>? _dataGrid;
+
+    private void AddSelectedControl(string htmlIconElment, string iconName)
+    {
+        _controlHtmlIcons.Add(htmlIconElment);
+        _controlIcons.Add(iconName);
+    }
+
+    private void RemoveControl()
+    {
+        if (!_controlHtmlIcons.Any() || !_controlIcons.Any()) return;
+        _controlHtmlIcons.Remove(_controlHtmlIcons.Last());
+        _controlIcons.Remove(_controlIcons.Last());
+    }
+
+    private async Task LoadImageAsync(InputFileChangeEventArgs e)
+    {
+    // setting the max size for the file
+        const long maxFileSize = 1024 * 1024 * 10;
+    // Provide the HTTP Content based Stream
+    // and open the stream for reading the uploaded file
+        _fileContent = new StreamContent(e.File.OpenReadStream(maxFileSize));
+    // read file name
+        _fileName = e.File.Name;
+
+        var fileSize = new byte[e.File.Size];
+    // read the file bytes in sequence
+        await e.File.OpenReadStream(maxFileSize).ReadAsync(fileSize);
+    // read file content type
+        _imageType = e.File.ContentType;
+    // create URL
+        _imgUrl = $"data:{_imageType};base64,{Convert.ToBase64String(fileSize)}";
+    }
+
+    private void AddAbility()
+    {
+        StringBuilder sb = new();
+        foreach (var item in _controlIcons)
+        {
+            sb.Append(item);
+            sb.Append(",");
+        }
+
+        var controlNames = sb.ToString();
+        _abilityList.Add(new Ability { Name = _abilityName ?? "", Controls = controlNames });
+        _dataGrid?.Reload();
+
+        _controlHtmlIcons.Clear();
+        _controlIcons.Clear();
+        _abilityName = "";
+    }
+
+    private async Task SaveFighterAsync()
+    {
+        _fighter.Abilities = _abilityList;
+        using var content = new MultipartFormDataContent();
+        if (_fileContent is not null)
+        {
+            content.Add(_fileContent, "\"file\"", _fileName);
+            _fighter.Sprite = content;
+        }
+
+        Console.WriteLine(JsonSerializer.Serialize(_fighter, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        }));
+
+        var result = await _httpClient.PostAsJsonAsync("fighters",
+            _fighter, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+
+        if (!result.IsSuccessStatusCode)
+        {
+            Console.WriteLine("Error al enviar la petición");
+        }
+    }
+
+}
